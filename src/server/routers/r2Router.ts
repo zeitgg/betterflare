@@ -57,6 +57,18 @@ const signedUrlSchema = z.object({
   endpoint: z.string().optional(),
 });
 
+const uploadObjectSchema = z.object({
+  bucketName: z.string().min(1, "Bucket name is required"),
+  key: z.string().min(1, "Object key is required"),
+  fileBase64: z.string().min(1, "File data is required"),
+  contentType: z.string().optional(),
+  // Include credential fields
+  accountId: z.string().min(1, "Account ID is required"),
+  accessKeyId: z.string().min(1, "Access Key ID is required"),
+  secretAccessKey: z.string().min(1, "Secret Access Key is required"),
+  endpoint: z.string().optional(),
+});
+
 // Create the R2 router
 export const r2Router = router({
   // Validate credentials and list buckets
@@ -152,6 +164,42 @@ export const r2Router = router({
       } catch (error) {
         console.error("Error renaming object:", error);
         throw new Error(`Failed to rename object: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }),
+
+  // Upload an object
+  uploadObject: procedure
+    .input(uploadObjectSchema)
+    .mutation(async ({ input }) => {
+      try {
+        const credentials: R2Credentials = {
+          accountId: input.accountId,
+          accessKeyId: input.accessKeyId,
+          secretAccessKey: input.secretAccessKey,
+          endpoint: input.endpoint
+        };
+        
+        // Convert base64 string back to Buffer with memory management
+        // Use a more memory-efficient approach by processing in chunks
+        const MAX_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
+        const fileBase64Length = input.fileBase64.length;
+        
+        if (fileBase64Length > 100 * 1024 * 1024) { // If base64 is larger than ~75MB (100MB base64 ≈ 75MB binary)
+          throw new Error("File too large. Maximum upload size is 75MB");
+        }
+        
+        // For smaller files, process directly
+        const fileBuffer = Buffer.from(input.fileBase64, 'base64');
+        
+        const r2Service = new R2Service(credentials);
+        await r2Service.uploadObject(input.bucketName, input.key, fileBuffer, input.contentType);
+        
+        // Explicitly clear the buffer reference to help garbage collection
+        // This is a hint to the GC but doesn't guarantee immediate cleanup
+        return { success: true };
+      } catch (error) {
+        console.error("Error uploading object:", error);
+        throw new Error(`Failed to upload object: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }),
 });

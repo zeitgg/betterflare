@@ -112,6 +112,21 @@ export default function BucketPage({}: BucketPageProps) {
     }
   });
 
+  // Add upload mutation
+  const uploadMutation = trpc.r2.uploadObject.useMutation({
+    onSuccess: () => {
+      toast.success("File uploaded successfully");
+      refetch();
+      setIsUploading(false);
+      setUploadProgress(100);
+    },
+    onError: (error) => {
+      toast.error(`Error uploading file: ${error.message || 'Unknown error'}`);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  });
+
   // Handle folder navigation
   const handleNavigateToFolder = (prefix: string) => {
     setCurrentPrefix(prefix);
@@ -131,6 +146,14 @@ export default function BucketPage({}: BucketPageProps) {
     if (!selectedObject || !newObjectName) return;
     
     const newKey = currentPrefix + newObjectName;
+    
+    // Log the rename parameters for debugging
+    console.log("Renaming object:", {
+      bucketName,
+      oldKey: selectedObject,
+      newKey,
+      currentPrefix
+    });
     
     renameMutation.mutate({
       ...credentials!,
@@ -154,25 +177,60 @@ export default function BucketPage({}: BucketPageProps) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const file = files[0];
+    
+    // Add file size check to prevent memory issues
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File too large. Maximum size is ${formatBytes(MAX_FILE_SIZE)}`);
+      return;
+    }
+    
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      // In a real implementation, you would upload the file to R2 here
-      // For now, we'll just simulate the upload with a progress indicator
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 200));
+      const key = currentPrefix + file.name;
+      
+      // Read the file as an ArrayBuffer with proper memory management
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Convert ArrayBuffer to base64 string in chunks to avoid memory issues
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      let base64String = '';
+      
+      // Process in chunks to avoid memory issues
+      for (let i = 0; i < arrayBuffer.byteLength; i += chunkSize) {
+        const chunk = arrayBuffer.slice(i, Math.min(i + chunkSize, arrayBuffer.byteLength));
+        base64String += Buffer.from(chunk).toString('base64');
+        
+        // Update progress based on how much we've processed
+        const progress = Math.min(10 + Math.floor((i / arrayBuffer.byteLength) * 80), 90);
+        setUploadProgress(progress);
+        
+        // Allow UI to update by yielding to the event loop
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
-
-      toast.success("File uploaded successfully");
-      refetch();
+      
+      // Use the upload mutation to upload the file
+      await uploadMutation.mutateAsync({
+        ...credentials!,
+        bucketName,
+        key,
+        fileBase64: base64String,
+        contentType: file.type
+      });
+      
+      // The success handler in the mutation will handle the rest
     } catch (error) {
+      console.error("Error uploading file:", error);
       toast.error("Error uploading file");
-    } finally {
       setIsUploading(false);
       setUploadProgress(0);
     }
+    
+    // Clean up to prevent memory leaks
+    e.target.value = '';
   };
 
   // Handle refresh with animation
@@ -347,12 +405,14 @@ export default function BucketPage({}: BucketPageProps) {
                             <Download className="h-4 w-4" />
                           </Button>
                           
-                          <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+                          <Dialog open={isRenameDialogOpen && selectedObject === object.Key} onOpenChange={(open) => {
+                            setIsRenameDialogOpen(open);
+                            if (!open) setSelectedObject(null);
+                          }}>
                             <DialogTrigger asChild>
                               <Button 
                                 variant="ghost" 
                                 size="icon"
-                                disabled={true}
                                 onClick={() => {
                                   setSelectedObject(object.Key!);
                                   setNewObjectName(fileName || '');
@@ -386,9 +446,14 @@ export default function BucketPage({}: BucketPageProps) {
                                 <Button 
                                   type="submit" 
                                   onClick={handleRenameObject}
-                                  disabled={!newObjectName}
+                                  disabled={!newObjectName || renameMutation.isPending}
                                 >
-                                  Save changes
+                                  {renameMutation.isPending ? (
+                                    <>
+                                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                                      Renaming...
+                                    </>
+                                  ) : 'Save changes'}
                                 </Button>
                               </DialogFooter>
                             </DialogContent>
