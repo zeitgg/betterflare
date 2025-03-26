@@ -1,103 +1,184 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useCredentialsStore } from "@/store/credentialsStore";
+import { trpc } from "@/trpc/client";
+import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CloudIcon, ShieldIcon, KeyIcon, DatabaseIcon } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const router = useRouter();
+  const { credentials, isAuthenticated, setCredentials } = useCredentialsStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [formData, setFormData] = useState({
+    accountId: "",
+    accessKeyId: "",
+    secretAccessKey: "",
+    endpoint: "",
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Check if user is already authenticated
+  useEffect(() => {
+    // Add a small delay to ensure the store is hydrated from localStorage
+    const timer = setTimeout(() => {
+      if (isAuthenticated && credentials) {
+        router.push("/dashboard");
+      }
+      setIsCheckingAuth(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, credentials, router]);
+
+  const validateCredentialsMutation = trpc.r2.validateCredentials.useMutation({
+    onSuccess: (data) => {
+      setIsLoading(false);
+      if (data.success) {
+        setCredentials(formData);
+        toast.success("Successfully connected to Cloudflare R2");
+        router.push("/dashboard");
+      } else {
+        toast.error("Failed to connect to Cloudflare R2. Please check your credentials.");
+      }
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast.error(`Error: ${error.message}`);
+    },
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    validateCredentialsMutation.mutate(formData);
+  };
+
+  // Show loading state while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center justify-center w-16 h-16 rounded-full border mb-4">
+            <svg className="w-8 h-8" viewBox="0 0 128 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M64 0L0 112H128L64 0ZM65.3409 20.8783L109.442 97.3554L65.3409 71.0532V20.8783Z" fill="currentColor"/>
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">BetterFlare</h1>
+          <p className="mt-2 text-muted-foreground">
+            Manage your Cloudflare R2 buckets with ease
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Connect to Cloudflare R2</CardTitle>
+            <CardDescription>
+              Enter your Cloudflare R2 credentials to get started. Your credentials are stored locally in your browser.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="accountId" className="flex items-center gap-2">
+                  <ShieldIcon className="h-4 w-4" />
+                  Account ID
+                </Label>
+                <Input
+                  id="accountId"
+                  name="accountId"
+                  placeholder="Your Cloudflare Account ID"
+                  value={formData.accountId}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="accessKeyId" className="flex items-center gap-2">
+                  <KeyIcon className="h-4 w-4" />
+                  Access Key ID
+                </Label>
+                <Input
+                  id="accessKeyId"
+                  name="accessKeyId"
+                  placeholder="Your R2 Access Key ID"
+                  value={formData.accessKeyId}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="secretAccessKey" className="flex items-center gap-2">
+                  <KeyIcon className="h-4 w-4" />
+                  Secret Access Key
+                </Label>
+                <Input
+                  id="secretAccessKey"
+                  name="secretAccessKey"
+                  type="password"
+                  placeholder="Your R2 Secret Access Key"
+                  value={formData.secretAccessKey}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="endpoint" className="flex items-center gap-2">
+                  <DatabaseIcon className="h-4 w-4" />
+                  Custom Endpoint (Optional)
+                </Label>
+                <Input
+                  id="endpoint"
+                  name="endpoint"
+                  placeholder="https://your-account-id.r2.cloudflarestorage.com"
+                  value={formData.endpoint}
+                  onChange={handleChange}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to use the default endpoint
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || !formData.accountId || !formData.accessKeyId || !formData.secretAccessKey}
+              >
+                {isLoading ? "Connecting..." : "Connect"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+        
+        <p className="text-center text-xs text-muted-foreground mt-4">
+          Your credentials are stored only in your browser's local storage and are never sent to our servers.
+        </p>
+      </div>
     </div>
   );
 }
