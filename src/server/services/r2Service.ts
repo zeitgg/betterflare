@@ -99,7 +99,7 @@ export class R2Service {
       // Copy the object to the new key
       const copyCommand = new CopyObjectCommand({
         Bucket: bucketName,
-        CopySource: `${bucketName}/${encodeURIComponent(oldKey)}`,
+        CopySource: encodeURIComponent(`${bucketName}/${oldKey}`),
         Key: newKey,
       });
       

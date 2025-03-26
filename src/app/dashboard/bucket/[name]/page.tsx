@@ -352,12 +352,14 @@ export default function BucketPage({}: BucketPageProps) {
                               <Button 
                                 variant="ghost" 
                                 size="icon"
+                                disabled={true}
                                 onClick={() => {
                                   setSelectedObject(object.Key!);
                                   setNewObjectName(fileName || '');
                                 }}
                               >
                                 <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Rename</span>
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
