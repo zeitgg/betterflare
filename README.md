@@ -39,7 +39,7 @@ Built with Next.js and tRPC, BetterFlare offers a responsive, Vercel-inspired de
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/betterflare.git
+git clone https://github.com/zeitgg/betterflare.git
 cd betterflare
 ```
 
