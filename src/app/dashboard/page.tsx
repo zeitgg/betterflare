@@ -105,7 +105,7 @@ export default function DashboardPage() {
         <CardFooter className="pt-2 flex justify-end">
           <Button 
             variant="ghost" 
-            className="gap-1 hover:bg-primary hover:text-primary-foreground"
+            className="gap-1"
             onClick={() => handleNavigateToBucket(bucket.Name!)}
           >
             View Objects
