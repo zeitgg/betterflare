@@ -50,7 +50,7 @@ export function Sidebar() {
       <path d="M64 0L0 112H128L64 0ZM65.3409 20.8783L109.442 97.3554L65.3409 71.0532V20.8783Z" fill="white"/>
     </svg>
     <span className="font-medium text-sidebar-foreground whitespace-nowrap overflow-hidden text-ellipsis">
-      BetterFlare
+      BetterFlare <span className="text-muted-foreground italic text-xs pr-2">by ZEIT</span>
     </span>
   </div>
 </div>
