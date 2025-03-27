@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { useCredentialsStore } from "@/store/credentialsStore";
 import { trpc } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
-import { DatabaseIcon, CalendarIcon, RefreshCw, ChevronRightIcon } from "lucide-react";
+import {
+  DatabaseIcon,
+  CalendarIcon,
+  RefreshCw,
+  ChevronRightIcon,
+} from "lucide-react";
+import { CreateBucketDialog } from "@/components/dashboard/create-bucket-dialog";
+import { BucketContextMenu } from "@/components/dashboard/bucket-context-menu";
 import { format } from "date-fns";
 
 export default function DashboardPage() {
@@ -25,7 +32,7 @@ export default function DashboardPage() {
     },
     onError: () => {
       setIsLoading(false);
-    }
+    },
   });
 
   // Call the mutation when the component mounts
@@ -54,7 +61,7 @@ export default function DashboardPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     validateCredentialsMutation.mutate(credentials!);
-    
+
     // Add a small delay to make the animation visible even for fast refreshes
     setTimeout(() => {
       setIsRefreshing(false);
@@ -69,25 +76,56 @@ export default function DashboardPage() {
   const getBucketCreationDate = (bucket: any) => {
     // If CreationDate is available, format it
     if (bucket.CreationDate) {
-      return format(new Date(bucket.CreationDate), 'MMM d, yyyy');
+      return format(new Date(bucket.CreationDate), "MMM d, yyyy");
     }
-    
+
     // Fallback to a placeholder date for demo purposes
-    return format(new Date(), 'MMM d, yyyy');
+    return format(new Date(), "MMM d, yyyy");
   };
 
   // Memoize the bucket cards to avoid unnecessary re-renders
+  // State for context menu position and visibility
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    bucketName: string;
+  }>({ visible: false, x: 0, y: 0, bucketName: "" });
+
+  // Handle right-click on bucket card
+  const handleContextMenu = (e: React.MouseEvent, bucketName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      bucketName,
+    });
+  };
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu((prev) => ({ ...prev, visible: false }));
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
   const bucketCards = useMemo(() => {
     if (!buckets.length) return null;
-    
+
     return buckets.map((bucket: any) => (
-      <div 
-        key={bucket.Name} 
+      <div
+        key={bucket.Name}
         className="group relative flex flex-col p-5 bg-card border border-border rounded-md hover:border-primary/30 transition-all cursor-pointer"
         onClick={() => handleNavigateToBucket(bucket.Name!)}
+        onContextMenu={(e) => handleContextMenu(e, bucket.Name!)}
         style={{
-          animation: 'slide-up 0.3s ease forwards',
-          animationFillMode: 'both',
+          animation: "slide-up 0.3s ease forwards",
+          animationFillMode: "both",
         }}
       >
         <div className="flex items-center justify-between mb-2">
@@ -95,24 +133,20 @@ export default function DashboardPage() {
             <DatabaseIcon className="h-5 w-5 text-primary" />
             <h3 className="text-base font-medium">{bucket.Name}</h3>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleNavigateToBucket(bucket.Name!);
-            }}
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <BucketContextMenu
+              bucketName={bucket.Name!}
+              onBucketDeleted={handleRefresh}
+              onNavigate={() => handleNavigateToBucket(bucket.Name!)}
+            />
+          </div>
         </div>
-        
+
         <div className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
           <CalendarIcon className="h-3 w-3" />
           {getBucketCreationDate(bucket)}
         </div>
-        
+
         <p className="text-sm text-muted-foreground mt-auto">
           Cloudflare R2 Storage Bucket
         </p>
@@ -120,8 +154,30 @@ export default function DashboardPage() {
     ));
   }, [buckets]);
 
+  // Render the floating context menu when visible
+  const renderContextMenu = () => {
+    if (!contextMenu.visible) return null;
+
+    return (
+      <div
+        className="fixed z-50"
+        style={{
+          top: `${contextMenu.y}px`,
+          left: `${contextMenu.x}px`,
+        }}
+      >
+        <BucketContextMenu
+          bucketName={contextMenu.bucketName}
+          onBucketDeleted={handleRefresh}
+          onNavigate={() => handleNavigateToBucket(contextMenu.bucketName)}
+        />
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {renderContextMenu()}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-medium tracking-tight">Buckets</h1>
@@ -129,28 +185,35 @@ export default function DashboardPage() {
             Manage your Cloudflare R2 storage buckets
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isLoading || validateCredentialsMutation.isPending || isRefreshing}
-          className="gap-2 h-9"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <CreateBucketDialog onBucketCreated={handleRefresh} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={
+              isLoading || validateCredentialsMutation.isPending || isRefreshing
+            }
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading || validateCredentialsMutation.isPending ? (
           // Skeleton loading state with Linear-style pulse animation
           Array.from({ length: 3 }).map((_, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className="flex flex-col p-5 bg-card border border-border rounded-md"
-              style={{ 
+              style={{
                 animation: `pulse 2s infinite ease-in-out`,
-                animationDelay: `${i * 0.1}s` 
+                animationDelay: `${i * 0.1}s`,
               }}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -164,18 +227,21 @@ export default function DashboardPage() {
         ) : buckets.length > 0 ? (
           bucketCards
         ) : (
-          <div 
+          <div
             className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed rounded-md text-center"
-            style={{ animation: 'fade-in 0.5s ease forwards' }}
+            style={{ animation: "fade-in 0.5s ease forwards" }}
           >
             <DatabaseIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <h2 className="text-xl font-medium mb-2">No Buckets Found</h2>
             <p className="text-muted-foreground text-center mb-6 max-w-md">
-              You don't have any R2 buckets in your Cloudflare account yet. Create one to get started.
+              You don't have any R2 buckets in your Cloudflare account yet.
+              Create one to get started.
             </p>
-            <Button 
+            <Button
               variant="outline"
-              onClick={() => window.open('https://dash.cloudflare.com/', '_blank')}
+              onClick={() =>
+                window.open("https://dash.cloudflare.com/", "_blank")
+              }
               className="gap-2"
             >
               <DatabaseIcon className="h-4 w-4" />
