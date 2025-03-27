@@ -108,14 +108,9 @@ export default function SettingsPage() {
                 <h3 className="font-medium">Dark Mode</h3>
                 <p className="text-sm text-muted-foreground">
                   Switch between light and dark themes.{" "}
-                  <span className="text-yellow-400">This is a PRO feature</span>
                 </p>
               </div>
-              <Switch
-                disabled
-                checked={darkMode}
-                onCheckedChange={toggleDarkMode}
-              />
+              <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
             </div>
           </CardContent>
         </Card>
