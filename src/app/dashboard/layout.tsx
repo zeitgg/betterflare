@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCredentialsStore } from "@/store/credentialsStore";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { Sidebar } from "@/components/sidebar";
 
 export default function DashboardLayout({
   children,
@@ -40,7 +40,7 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <p className="text-sm text-muted-foreground">Loading dashboard...</p>
@@ -50,9 +50,9 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6 bg-muted/10">
+      <main className="flex-1 overflow-y-auto p-6">
         {children}
       </main>
     </div>

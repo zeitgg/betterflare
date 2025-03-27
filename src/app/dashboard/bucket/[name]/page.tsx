@@ -7,7 +7,7 @@ import { trpc } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { ChevronRight, FolderIcon, FileIcon, ArrowUp, Trash2, Pencil, Download, Upload, RefreshCw } from "lucide-react";
+import { ChevronRight, FolderIcon, FileIcon, ArrowUp, Trash2, Pencil, Download, Upload, RefreshCw, DatabaseIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -145,13 +145,11 @@ export default function BucketPage({}: BucketPageProps) {
   const handleRenameObject = () => {
     if (!selectedObject || !newObjectName) return;
     
-    const newKey = currentPrefix + newObjectName;
-    
     // Log the rename parameters for debugging
     console.log("Renaming object:", {
       bucketName,
       oldKey: selectedObject,
-      newKey,
+      newKey: currentPrefix + newObjectName,
       currentPrefix
     });
     
@@ -159,7 +157,7 @@ export default function BucketPage({}: BucketPageProps) {
       ...credentials!,
       bucketName,
       oldKey: selectedObject,
-      newKey
+      newKey: currentPrefix + newObjectName
     });
   };
 
@@ -253,25 +251,32 @@ export default function BucketPage({}: BucketPageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{bucketName}</h1>
+        <div className="flex items-center gap-2">
+          <DatabaseIcon className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-medium tracking-tight">{bucketName}</h1>
+        </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
+            size="sm"
             onClick={handleRefresh}
             disabled={isLoading || isRefreshing}
+            className="gap-2 h-9"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           
           <Button 
-            variant="default" 
+            variant="default"
+            size="sm" 
             disabled={isUploading}
             onClick={() => document.getElementById('file-upload')?.click()}
+            className="gap-2 h-9"
           >
-            <Upload className="h-4 w-4 mr-2" />
+            <Upload className="h-3.5 w-3.5" />
             Upload
           </Button>
           <input
@@ -284,19 +289,19 @@ export default function BucketPage({}: BucketPageProps) {
       </div>
 
       {/* Breadcrumb navigation */}
-      <Breadcrumb>
+      <Breadcrumb className="py-1 px-3 bg-secondary rounded-md">
         <BreadcrumbList>
           {breadcrumbItems.map((item, index) => (
             <BreadcrumbItem key={index}>
               <BreadcrumbLink 
                 onClick={() => handleNavigateToFolder(item.prefix)}
-                className="cursor-pointer hover:underline"
+                className="cursor-pointer hover:text-primary transition-colors text-sm"
               >
                 {item.name}
               </BreadcrumbLink>
               {index < breadcrumbItems.length - 1 && (
                 <BreadcrumbSeparator>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3 w-3" />
                 </BreadcrumbSeparator>
               )}
             </BreadcrumbItem>
@@ -306,9 +311,9 @@ export default function BucketPage({}: BucketPageProps) {
 
       {/* Upload progress indicator */}
       {isUploading && (
-        <div className="w-full rounded-full h-2.5 mt-4 border">
+        <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
           <div 
-            className="bg-primary h-2.5 rounded-full" 
+            className="bg-primary h-full rounded-full transition-all duration-300 ease-out" 
             style={{ width: `${uploadProgress}%` }}
           ></div>
         </div>
@@ -317,24 +322,25 @@ export default function BucketPage({}: BucketPageProps) {
       {/* Back button */}
       {currentPrefix && (
         <Button 
-          variant="outline" 
+          variant="ghost" 
           onClick={navigateUp}
-          className="mb-4"
+          size="sm"
+          className="gap-2 h-8"
         >
-          <ArrowUp className="h-4 w-4 mr-2" />
+          <ArrowUp className="h-3.5 w-3.5" />
           Up to parent directory
         </Button>
       )}
 
       {/* Objects table */}
-      <div className="border rounded-md">
+      <div className="border border-border rounded-md overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[300px]">Name</TableHead>
-              <TableHead>Last Modified</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[300px] text-xs font-medium">Name</TableHead>
+              <TableHead className="text-xs font-medium">Last Modified</TableHead>
+              <TableHead className="text-xs font-medium">Size</TableHead>
+              <TableHead className="text-right text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -352,21 +358,21 @@ export default function BucketPage({}: BucketPageProps) {
                 {data?.prefixes.map((prefix) => {
                   const folderName = prefix.Prefix?.replace(currentPrefix, '').replace('/', '');
                   return (
-                    <TableRow key={prefix.Prefix} className="group">
-                      <TableCell className="font-medium">
+                    <TableRow key={prefix.Prefix} className="group hover:bg-secondary/50 transition-colors">
+                      <TableCell className="font-medium py-2">
                         <div 
-                          className="flex items-center cursor-pointer group-hover:underline"
+                          className="flex items-center cursor-pointer group-hover:text-primary transition-colors"
                           onClick={() => handleNavigateToFolder(prefix.Prefix!)}
                         >
                           <FolderIcon className="h-4 w-4 mr-2 text-primary" />
                           {folderName}/
                         </div>
                       </TableCell>
-                      <TableCell>—</TableCell>
-                      <TableCell>—</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" disabled>
-                          <Trash2 className="h-4 w-4" />
+                      <TableCell className="text-muted-foreground text-sm py-2">—</TableCell>
+                      <TableCell className="text-muted-foreground text-sm py-2">—</TableCell>
+                      <TableCell className="text-right py-2">
+                        <Button variant="ghost" size="icon" disabled className="h-7 w-7 opacity-30">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -382,27 +388,28 @@ export default function BucketPage({}: BucketPageProps) {
                   const fileName = object.Key?.replace(currentPrefix, '');
                   
                   return (
-                    <TableRow key={object.Key} className="group">
-                      <TableCell className="font-medium">
+                    <TableRow key={object.Key} className="group hover:bg-secondary/50 transition-colors">
+                      <TableCell className="font-medium py-2">
                         <div className="flex items-center">
                           {getFileTypeIcon(fileName || '', "h-4 w-4 mr-2")}
-                          {fileName}
+                          <span className="text-sm">{fileName}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-xs py-2">
                         {object.LastModified ? new Date(object.LastModified).toLocaleString() : '—'}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-xs py-2">
                         {object.Size !== undefined ? formatBytes(object.Size) : '—'}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 opacity-70 group-hover:opacity-100">
+                      <TableCell className="text-right py-2">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button 
                             variant="ghost" 
                             size="icon"
+                            className="h-7 w-7"
                             onClick={() => handleDownloadObject(object.Key!)}
                           >
-                            <Download className="h-4 w-4" />
+                            <Download className="h-3.5 w-3.5" />
                           </Button>
                           
                           <Dialog open={isRenameDialogOpen && selectedObject === object.Key} onOpenChange={(open) => {
@@ -413,16 +420,17 @@ export default function BucketPage({}: BucketPageProps) {
                               <Button 
                                 variant="ghost" 
                                 size="icon"
+                                className="h-7 w-7"
                                 onClick={() => {
                                   setSelectedObject(object.Key!);
                                   setNewObjectName(fileName || '');
                                 }}
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
                                 <span className="sr-only">Rename</span>
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="sm:max-w-md">
                               <DialogHeader>
                                 <DialogTitle>Rename Object</DialogTitle>
                                 <DialogDescription>
@@ -447,6 +455,7 @@ export default function BucketPage({}: BucketPageProps) {
                                   type="submit" 
                                   onClick={handleRenameObject}
                                   disabled={!newObjectName || renameMutation.isPending}
+                                  size="sm"
                                 >
                                   {renameMutation.isPending ? (
                                     <>
@@ -461,22 +470,26 @@ export default function BucketPage({}: BucketPageProps) {
                           
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash2 className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-7 w-7"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="sm:max-w-md">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogTitle>Delete Object</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the
-                                  object from your R2 bucket.
+                                  Are you sure you want to delete this object? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
+                                <AlertDialogAction
                                   onClick={() => handleDeleteObject(object.Key!)}
+                                  className="bg-destructive hover:bg-destructive/90"
                                 >
                                   Delete
                                 </AlertDialogAction>
@@ -490,21 +503,21 @@ export default function BucketPage({}: BucketPageProps) {
                 })}
                 
                 {/* Empty state */}
-                {(!data?.objects || data.objects.length === 0) && 
-                 (!data?.prefixes || data.prefixes.length === 0) && (
+                {(!data?.prefixes || data.prefixes.length === 0) && 
+                 (!data?.objects || data.objects.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-12">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <p className="text-sm text-muted-foreground">
-                          This folder is empty
-                        </p>
+                      <div className="flex flex-col items-center justify-center">
+                        <FolderIcon className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground mb-4">This folder is empty</p>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => document.getElementById('file-upload')?.click()}
+                          className="gap-2"
                         >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload a file
+                          <Upload className="h-3.5 w-3.5" />
+                          Upload Files
                         </Button>
                       </div>
                     </TableCell>

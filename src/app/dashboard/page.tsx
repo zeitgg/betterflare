@@ -4,10 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCredentialsStore } from "@/store/credentialsStore";
 import { trpc } from "@/trpc/client";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRightIcon, DatabaseIcon, CalendarIcon, RefreshCw } from "lucide-react";
+import { DatabaseIcon, CalendarIcon, RefreshCw, ChevronRightIcon } from "lucide-react";
 import { format } from "date-fns";
 
 export default function DashboardPage() {
@@ -71,11 +69,11 @@ export default function DashboardPage() {
   const getBucketCreationDate = (bucket: any) => {
     // If CreationDate is available, format it
     if (bucket.CreationDate) {
-      return format(new Date(bucket.CreationDate), 'PPP');
+      return format(new Date(bucket.CreationDate), 'MMM d, yyyy');
     }
     
     // Fallback to a placeholder date for demo purposes
-    return format(new Date(), 'PPP');
+    return format(new Date(), 'MMM d, yyyy');
   };
 
   // Memoize the bucket cards to avoid unnecessary re-renders
@@ -83,88 +81,104 @@ export default function DashboardPage() {
     if (!buckets.length) return null;
     
     return buckets.map((bucket: any) => (
-      <Card 
+      <div 
         key={bucket.Name} 
-        className="overflow-hidden transition-all hover:border-primary/50"
+        className="group relative flex flex-col p-5 bg-card border border-border rounded-md hover:border-primary/30 transition-all cursor-pointer"
+        onClick={() => handleNavigateToBucket(bucket.Name!)}
+        style={{
+          animation: 'slide-up 0.3s ease forwards',
+          animationFillMode: 'both',
+        }}
       >
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl flex items-center gap-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
             <DatabaseIcon className="h-5 w-5 text-primary" />
-            {bucket.Name}
-          </CardTitle>
-          <CardDescription className="flex items-center gap-1">
-            <CalendarIcon className="h-3 w-3" />
-            Created on {getBucketCreationDate(bucket)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pb-2">
-          <p className="text-sm text-muted-foreground">
-            Cloudflare R2 Storage Bucket
-          </p>
-        </CardContent>
-        <CardFooter className="pt-2 flex justify-end">
+            <h3 className="text-base font-medium">{bucket.Name}</h3>
+          </div>
           <Button 
             variant="ghost" 
-            className="gap-1"
-            onClick={() => handleNavigateToBucket(bucket.Name!)}
+            size="icon" 
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNavigateToBucket(bucket.Name!);
+            }}
           >
-            View Objects
             <ChevronRightIcon className="h-4 w-4" />
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+        
+        <div className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
+          <CalendarIcon className="h-3 w-3" />
+          {getBucketCreationDate(bucket)}
+        </div>
+        
+        <p className="text-sm text-muted-foreground mt-auto">
+          Cloudflare R2 Storage Bucket
+        </p>
+      </div>
     ));
   }, [buckets]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage your Cloudflare R2 buckets
+          <h1 className="text-2xl font-medium tracking-tight">Buckets</h1>
+          <p className="text-muted-foreground text-sm">
+            Manage your Cloudflare R2 storage buckets
           </p>
         </div>
         <Button 
           variant="outline" 
+          size="sm"
           onClick={handleRefresh}
           disabled={isLoading || validateCredentialsMutation.isPending || isRefreshing}
+          className="gap-2 h-9"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading || validateCredentialsMutation.isPending ? (
-          // Skeleton loading state
+          // Skeleton loading state with Linear-style pulse animation
           Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-              </CardHeader>
-              <CardContent className="pb-2">
-                <Skeleton className="h-4 w-full" />
-              </CardContent>
-              <CardFooter className="pt-2">
-                <Skeleton className="h-9 w-28 ml-auto" />
-              </CardFooter>
-            </Card>
+            <div 
+              key={i} 
+              className="flex flex-col p-5 bg-card border border-border rounded-md"
+              style={{ 
+                animation: `pulse 2s infinite ease-in-out`,
+                animationDelay: `${i * 0.1}s` 
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-5 w-5 rounded-full bg-muted"></div>
+                <div className="h-4 w-32 bg-muted rounded"></div>
+              </div>
+              <div className="h-3 w-24 bg-muted rounded mb-3"></div>
+              <div className="h-4 w-full bg-muted rounded mt-auto"></div>
+            </div>
           ))
         ) : buckets.length > 0 ? (
           bucketCards
         ) : (
-          <div className="col-span-full flex flex-col items-center justify-center p-12 border rounded-lg">
+          <div 
+            className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed rounded-md text-center"
+            style={{ animation: 'fade-in 0.5s ease forwards' }}
+          >
             <DatabaseIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">No Buckets Found</h2>
-            <p className="text-muted-foreground text-center mb-4">
-              You don't have any R2 buckets in your Cloudflare account yet.
+            <h2 className="text-xl font-medium mb-2">No Buckets Found</h2>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              You don't have any R2 buckets in your Cloudflare account yet. Create one to get started.
             </p>
             <Button 
               variant="outline"
               onClick={() => window.open('https://dash.cloudflare.com/', '_blank')}
+              className="gap-2"
             >
+              <DatabaseIcon className="h-4 w-4" />
               Create a Bucket in Cloudflare
             </Button>
           </div>
