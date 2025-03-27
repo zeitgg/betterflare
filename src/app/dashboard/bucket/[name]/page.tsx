@@ -219,7 +219,13 @@ export default function BucketPage({}: BucketPageProps) {
     const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
     if (file.size > MAX_FILE_SIZE) {
       toast.error(
-        `File too large. Maximum size is ${formatBytes(MAX_FILE_SIZE)}`
+        `File too large. Maximum size is ${formatBytes(
+          MAX_FILE_SIZE
+        )}. Consider using R2D2 CLI for larger files.`,
+        {
+          description: "Check the sidebar for more information about R2D2 CLI.",
+          duration: 6000,
+        }
       );
       return;
     }

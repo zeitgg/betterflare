@@ -103,7 +103,7 @@ export function Sidebar() {
         ))}
 
         {/* Settings */}
-        <div className="mt-auto">
+        <div>
           {isExpanded && (
             <div className="px-3 mt-6 mb-2">
               <h3 className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
@@ -132,6 +132,28 @@ export function Sidebar() {
             <LogOutIcon className="h-4 w-4 mr-2" />
             {isExpanded && "Logout"}
           </Button>
+        </div>
+        {/* CLI Information */}
+        <div className="mt-auto">
+          {isExpanded && (
+            <div className="px-3 mt-6 mb-2 border border-sidebar-border rounded-md mx-3 p-3 bg-sidebar-accent/20">
+              <h3 className="text-xs font-medium text-sidebar-foreground/80 uppercase tracking-wider mb-2">
+                Pro Tip
+              </h3>
+              <p className="text-xs text-sidebar-foreground/70">
+                For files larger than 50MB, use the{" "}
+                <a
+                  href="https://docs.zeit.gg/docs/cli"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  R2D2 CLI
+                </a>{" "}
+                to upload directly to your buckets.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
